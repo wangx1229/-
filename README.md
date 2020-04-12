@@ -13,12 +13,35 @@ canvas篇
 解决办法是选择的是在我们cdn服务器添加我们的域名，同时依次设置img.crossOrigin = 'Anonymous'和img.src = src，这两个设置顺序非常重要。除了调用toDataURL外，调用getImageData和toBlob也会抛错。
 
 2.canvas在引入图片后，在导出发现canvas中一些内容缺失
-这个问题如果之前有经验的话，很容易发现是因为图片的onload事件是一个异步事件，只需要把后续代码移入到onloa 事件就可以解决。 是f's
+这个问题如果之前有经验的话，很容易发现是因为图片的onload事件是一个异步事件，只需要把后续代码移入到onload 事件就可以解决。 但是一层层嵌套代码...反正我是忍不了。
 
-3.canvas文字无法换行
+封装loadImg方法，返回promise，愉快的使用async函数。
 
-4.canvas转成图片会变模糊，canvas转成图片以后体积太大导致无法上传
+3.canvas转成图片会变模糊，canvas转成图片以后体积太大导致无法上传，以及安卓长按图片保存时偶然崩溃
 
-5.canvas根据图片大小，进行图片裁剪展示大小
+解决图片模糊的办法是canvas通过属性设置的宽高为通过样式设置宽高的两倍
 
-6.在一段文字后又写一段文字时，如果前一段文字发生变化，两端文字
+canvas再转成base64时，图片大小会发生变化。第一步可以通过设置你自身canvas的大小来控制导出图片的质量，第二步设置toDataURL的参数，来控制图片的质量，第三步就是我们自己在前端计算图片的大小，不允许上传太大的图片。因为有计算大小，所以就会涉及到base64的原理以及位(bit)和字节(byte)之间的转换。
+
+4.canvas根据图片大小，进行图片裁剪，并展示图片当中的内容
+
+第一版没有对上传图片做限制，所以只能对上传的图片进行裁剪后展示，否则图片会发生变形。html中，img这个dom元素有object-fit属性可以设置，但是canvas是完完全全的位图，img没有这个属性，只能手动裁剪。
+
+在canvas的图片加载过之后，对比图片的宽高，以小的边为基准进行裁剪。举个例子，当图片宽比高长时，以高为基准，根据需要展示的内容的宽高比，计算截图的图片宽度，然后在依据截取图片的宽高去计算截图片的坐标位置。
+
+5.canvas文字中遇到的问题，一个是在一段文字后又写一段文字时，如果前一段文字发生变化，两端文字可能会重叠或者距离增加， 另一个是文字换行
+
+相同的起始坐标，对文字的定位和对其他内容的定位，发现位置竟然不一样。原因就在于[textBaseline](https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/textBaseline)属性。而他又是基于[文本基线](https://developer.mozilla.org/zh-CN/docs/Web/API/Canvas_API/Tutorial/Drawing_text)的。
+
+[ctx.measureText（）](https://developer.mozilla.org/zh-CN/docs/Web/API/CanvasRenderingContext2D/measureText) 他会返回一个[TextMetrics](https://developer.mozilla.org/zh-CN/docs/Web/API/TextMetrics)对象，我们可以使用它的width属性来计算内容的宽度。但是有一点需要注意，就是他会根据当前ctx.font的大小来计算。此外我们还可以通过fontBoundingBoxAscent，fontBoundingBoxDescent两个属性来近似的计算文本的高度。
+
+这样以来，我们就可以获得文本的高度和宽度，再依据第一段文字的x，y初始位置就可以动态的计算第二段文字的初始位置
+
+现在返回我们之前提到的第一个问题，当我们第一段文字发生癌变时，我们就可以计算出第一段啊文字
+
+canvas在fillText时是不会换行的，设置好宽度之后，内容过多，会发现字体重叠。这当然是不满足我们需求的，需要做出改进
+
+初步解决思路。将内容的每个字符串分割组成一个数组，然后去遍历这个数组，每次使用累计值和当前值进行拼接，然后去计算文本的宽度，当大于我们指定的最大宽度时，我们使用累计值进行本行的绘制，然后另起一行，并且将累积值设置为当前值。
+
+
+
