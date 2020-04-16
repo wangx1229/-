@@ -83,7 +83,9 @@ canvas内容防止模糊自适应的原理
 
 promise的原理
 
-base64原理
+[base64原理](https://www.cnblogs.com/libin-1/p/6165485.html)
+
+![base64](https://github.com/wangx1229/hook-canvas-uploadImage/blob/master/imgs/base64.png)
 
 函数式编程的理解
 
